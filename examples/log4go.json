@@ -1,0 +1,14 @@
+[
+    {
+        "Name"   : "stdout",
+        "Enable" : true,
+        "Level"  : "debug"
+    },
+
+    {
+        "Name"    : "file",
+        "Enable"  : true,
+        "Level"   : "debug",
+        "LogPath" : "/tmp/dir/test.log"
+    }
+]
