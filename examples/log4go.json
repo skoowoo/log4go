@@ -1,14 +1,15 @@
 [
     {
         "Name"   : "stdout",
-        "Enable" : true,
+        "Enable" :  true,
         "Level"  : "debug"
     },
 
     {
         "Name"    : "file",
-        "Enable"  : true,
-        "Level"   : "debug",
+        "Enable"  :  true,
+        "Level"   : "info",
+        "Rotate"  :  true,
         "LogPath" : "/tmp/dir/test.log"
     }
 ]

@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-var LEVEL_FLAGS = [...]string{"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+var LEVEL_FLAGS = [...]string{"DEBG", "INFO", "WARN", "EROR", "CRIT"}
 
 const (
 	DEBUG = iota
@@ -28,7 +28,7 @@ type Record struct {
 }
 
 func (r *Record) String() string {
-	return fmt.Sprintf("%s [%8s] %s %s\n", r.time, LEVEL_FLAGS[r.level], r.code, r.info)
+	return fmt.Sprintf("%s [%s] %s %s\n", r.time, LEVEL_FLAGS[r.level], r.code, r.info)
 }
 
 type Writer interface {
@@ -42,13 +42,17 @@ type Rotater interface {
 	Rotate(string)
 }
 
+type Flusher interface {
+	Flush() error
+}
+
 var logger_default *Logger
 
 type Logger struct {
 	writers         map[string]Writer
 	tunnel          chan *Record
 	rotate          chan string
-	flushChan       chan bool
+	exit            chan bool
 	lastLogTimeSecs int64
 	lastLogTimeStr  string
 	currentDay      int
@@ -80,7 +84,15 @@ func logRecordToWriters(logger *Logger) {
 					r.Rotate(suffix)
 				}
 			}
-		case <-logger.flushChan:
+		case <-time.After(time.Millisecond * 500):
+			for _, w := range logger.writers {
+				if f, ok := w.(Flusher); ok {
+					if err := f.Flush(); err != nil {
+						log.Println(err)
+					}
+				}
+			}
+		case <-logger.exit:
 			return
 		}
 	}
@@ -90,7 +102,7 @@ func NewLoggerDefault() *Logger {
 	logger_default = new(Logger)
 	logger_default.writers = make(map[string]Writer, 1)
 	logger_default.rotate = make(chan string, 1)
-	logger_default.flushChan = make(chan bool) // blocking channel
+	logger_default.exit = make(chan bool) // blocking channel
 	logger_default.tunnel = make(chan *Record, tunnel_size_default)
 	logger_default.currentDay = time.Now().Day()
 
@@ -146,8 +158,9 @@ func (l *Logger) formatRecordToTunnel(level int, format string, args ...interfac
 	l.tunnel <- r
 }
 
+// flush, send exit signal to writer goroutine, then handle all buffered records. 
 func (l *Logger) flush() {
-	l.flushChan <- true
+	l.exit <- true
 	for {
 		select {
 		case r := <-l.tunnel:
@@ -158,6 +171,11 @@ func (l *Logger) flush() {
 				if err := w.Write(r); err != nil {
 					log.Println(err)
 				}
+				if f, ok := w.(Flusher); ok {
+					if err := f.Flush(); err != nil {
+						log.Println(err)
+					}
+				}
 			}
 		default:
 			return
@@ -165,6 +183,7 @@ func (l *Logger) flush() {
 	}
 }
 
+// before program exit, you should call the Close() to write buffered records.
 func Close() {
 	logger_default.flush()
 }
