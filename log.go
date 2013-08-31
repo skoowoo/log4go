@@ -56,6 +56,7 @@ type Logger struct {
 	lastLogTimeSecs int64
 	lastLogTimeStr  string
 	currentDay      int
+	currentDayStr   string
 }
 
 // deliver all records to every writer
@@ -75,15 +76,6 @@ func logRecordToWriters(logger *Logger) {
 					log.Println(err)
 				}
 			}
-		case suffix := <-logger.rotate:
-			for _, w := range logger.writers {
-				if w.RotateOrNot() == false {
-					continue
-				}
-				if r, ok := w.(Rotater); ok {
-					r.Rotate(suffix)
-				}
-			}
 		case <-time.After(time.Millisecond * 500):
 			for _, w := range logger.writers {
 				if f, ok := w.(Flusher); ok {
@@ -95,16 +87,33 @@ func logRecordToWriters(logger *Logger) {
 		case <-logger.exit:
 			return
 		}
+
+		// check current time, judge to rotate or not.
+		now := time.Now()
+		if now.Day() != logger.currentDay {
+			suffix := logger.currentDayStr
+			logger.currentDay = now.Day()
+			logger.currentDayStr = now.Format("2006-01-02")
+
+			for _, w := range logger.writers {
+				if w.RotateOrNot() == false {
+					continue
+				}
+				if r, ok := w.(Rotater); ok {
+					r.Rotate(suffix)
+				}
+			}
+		}
 	}
 }
 
 func NewLoggerDefault() *Logger {
 	logger_default = new(Logger)
 	logger_default.writers = make(map[string]Writer, 1)
-	logger_default.rotate = make(chan string, 1)
 	logger_default.exit = make(chan bool) // blocking channel
 	logger_default.tunnel = make(chan *Record, tunnel_size_default)
 	logger_default.currentDay = time.Now().Day()
+	logger_default.currentDayStr = time.Now().Format("2006-01-02")
 
 	go logRecordToWriters(logger_default)
 
@@ -140,12 +149,6 @@ func (l *Logger) formatRecordToTunnel(level int, format string, args ...interfac
 	if now.Unix() != l.lastLogTimeSecs {
 		l.lastLogTimeSecs = now.Unix()
 		l.lastLogTimeStr = now.Format("2006/01/02 15:04:05")
-	}
-
-	// rotate
-	if now.Day() != l.currentDay {
-		l.currentDay = now.Day()
-		l.rotate <- now.Format("2006-01-02")
 	}
 
 	r := &Record{
