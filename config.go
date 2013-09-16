@@ -75,6 +75,22 @@ func LoadConfigFile(path string) {
 	}
 }
 
+func NewLogger(conf *ConfigWriter) {
+	if configStruct.Writers == nil {
+		configStruct.Writers = make([]ConfigWriter, 0, 1)
+	}
+
+	configStruct.Writers = append(configStruct.Writers, *conf)
+
+	if err := verifyConfig(&configStruct); err != nil {
+		panic(err)
+	}
+
+	if err := bootstrapLogger(&configStruct); err != nil {
+		panic(err)
+	}
+}
+
 func verifyConfig(conf *ConfigFile) error {
 	for _, wc := range conf.Writers {
 		if _, ok := writers[wc.Name]; !ok {
