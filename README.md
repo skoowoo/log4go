@@ -7,7 +7,7 @@ simple log library for Go language
 
     go get github.com/skoo87/log4go
 
-####Document
+####Usages
 参考 examples
 
 ####TODO
