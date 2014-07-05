@@ -1,0 +1,12 @@
+{
+    "LogLevel" : "info",
+
+    "FileWriter" : {
+        "LogPath" : "/tmp/access-%Y%M%D.log",
+        "On": true
+    },
+
+    "ConsoleWriter" : {
+        "On" : true
+    }
+}

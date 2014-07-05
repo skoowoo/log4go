@@ -3,127 +3,62 @@ package log4go
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
-	"path"
 )
 
-type WConf interface {
-	Name() string
-	Init(*ConfigWriter) error
+type ConfFileWriter struct {
+	LogPath string `json:"LogPath"`
+	On      bool   `json:"On"`
 }
 
-type ConfigWriter struct {
-	Name    string
-	Enable  bool
-	Level   string
-	LogPath string
-	Rotate  bool
+type ConfConsoleWriter struct {
+	On bool `json:"On"`
 }
 
-type ConfigFile struct {
-	Writers []ConfigWriter
+type LogConfig struct {
+	Level string            `json:"LogLevel"`
+	FW    ConfFileWriter    `json:"FileWriter"`
+	CW    ConfConsoleWriter `json:"ConsoleWriter"`
 }
 
-var (
-	configStruct ConfigFile
-	writers      map[string]WConf = make(map[string]WConf, 2)
-	writerLevels map[string]int   = make(map[string]int, 5)
-)
+func SetupLogWithConf(file string) (err error) {
+	var lc LogConfig
 
-func init() {
-	writerLevels["debug"] = DEBUG
-	writerLevels["info"] = INFO
-	writerLevels["warning"] = WARNING
-	writerLevels["error"] = ERROR
-	writerLevels["critical"] = CRITICAL
+	cnt, err := ioutil.ReadFile(file)
 
-}
-
-func addWriter(w WConf) {
-	name := w.Name()
-	if name == "" {
-		panic("writer must have a name")
+	if err = json.Unmarshal(cnt, &lc); err != nil {
+		return
 	}
 
-	if _, ok := writers[name]; ok {
-		panic(fmt.Errorf("\"%s\" writer exist", name))
-	}
-	writers[name] = w
-}
-
-func convLevel(l string) int {
-	return writerLevels[l]
-}
-
-func LoadConfigFile(path string) {
-	tmp, err := ioutil.ReadFile(path)
-	if err != nil {
-		panic(err)
+	if lc.FW.On {
+		w := NewFileWriter()
+		w.SetPathPattern(lc.FW.LogPath)
+		Register(w)
 	}
 
-	if err := json.Unmarshal(tmp, &configStruct.Writers); err != nil {
-		panic(err)
+	if lc.CW.On {
+		w := NewConsoleWriter()
+		Register(w)
 	}
 
-	if err := verifyConfig(&configStruct); err != nil {
-		panic(err)
+	switch lc.Level {
+	case "debug":
+		SetLevel(DEBUG)
+
+	case "info":
+		SetLevel(INFO)
+
+	case "warning":
+		SetLevel(WARNING)
+
+	case "error":
+		SetLevel(ERROR)
+
+	case "fatal":
+		SetLevel(FATAL)
+
+	default:
+		err = errors.New("Invalid log level")
 	}
-
-	if err := bootstrapLogger(&configStruct); err != nil {
-		panic(err)
-	}
-}
-
-func NewLogger(conf *ConfigWriter) {
-	if configStruct.Writers == nil {
-		configStruct.Writers = make([]ConfigWriter, 0, 1)
-	}
-
-	configStruct.Writers = append(configStruct.Writers, *conf)
-
-	if err := verifyConfig(&configStruct); err != nil {
-		panic(err)
-	}
-
-	if err := bootstrapLogger(&configStruct); err != nil {
-		panic(err)
-	}
-}
-
-func verifyConfig(conf *ConfigFile) error {
-	for _, wc := range conf.Writers {
-		if _, ok := writers[wc.Name]; !ok {
-			return fmt.Errorf("\"%s\" writer don't exist", wc.Name)
-		}
-
-		if _, ok := writerLevels[wc.Level]; !ok {
-			return fmt.Errorf("\"%s\" writer, level \"%s\" invalid", wc.Name, wc.Level)
-		}
-
-		wc.LogPath = path.Clean(wc.LogPath)
-	}
-	return nil
-}
-
-func bootstrapLogger(conf *ConfigFile) error {
-	logger := NewLoggerDefault()
-	if logger == nil {
-		return errors.New("new logger failed")
-	}
-
-	for _, wc := range conf.Writers {
-		if !wc.Enable {
-			continue
-		}
-		w := writers[wc.Name]
-		if err := w.Init(&wc); err != nil {
-			return err
-		}
-
-		// register into logger
-		logger.RegisterWriter(w.Name(), w.(Writer))
-	}
-
-	return nil
+	return
 }

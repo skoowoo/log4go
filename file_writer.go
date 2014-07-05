@@ -2,24 +2,71 @@ package log4go
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
-	"log"
+	"fmt"
 	"os"
 	"path"
+	"time"
 )
 
-type FileW struct {
-	name          string
-	level         int
-	rotate        bool
-	dir           string
-	fileName      string
+var pathVariableTable map[byte]func(*time.Time) int
+
+type FileWriter struct {
+	pathFmt       string
 	file          *os.File
 	fileBufWriter *bufio.Writer
-	lastSuffix    string
+	actions       []func(*time.Time) int
+	variables     []interface{}
 }
 
-func (w *FileW) Write(r *Record) error {
+func NewFileWriter() *FileWriter {
+	return &FileWriter{}
+}
+
+func (w *FileWriter) Init() error {
+	return w.Rotate()
+}
+
+func (w *FileWriter) SetPathPattern(pattern string) error {
+	n := 0
+	for _, c := range pattern {
+		if c == '%' {
+			n++
+		}
+	}
+
+	if n == 0 {
+		w.pathFmt = pattern
+		return nil
+	}
+
+	w.actions = make([]func(*time.Time) int, 0, n)
+	w.variables = make([]interface{}, n, n)
+	tmp := []byte(pattern)
+
+	variable := 0
+	for _, c := range tmp {
+		if variable == 1 {
+			act, ok := pathVariableTable[c]
+			if !ok {
+				return errors.New("Invalid rotate pattern (" + pattern + ")")
+			}
+			w.actions = append(w.actions, act)
+			variable = 0
+			continue
+		}
+		if c == '%' {
+			variable = 1
+		}
+	}
+
+	w.pathFmt = convertPatternToFmt(tmp)
+
+	return nil
+}
+
+func (w *FileWriter) Write(r *Record) error {
 	if w.fileBufWriter == nil {
 		return errors.New("no opened file")
 	}
@@ -29,84 +76,97 @@ func (w *FileW) Write(r *Record) error {
 	return nil
 }
 
-func (w *FileW) RotateOrNot() bool {
-	return w.rotate
-}
+func (w *FileWriter) Rotate() error {
+	now := time.Now()
+	v := 0
+	rotate := false
 
-func (w *FileW) Name() string {
-	return w.name
-}
+	for i, act := range w.actions {
+		v = act(&now)
+		if v != w.variables[i] {
+			w.variables[i] = v
+			rotate = true
+		}
+	}
 
-func (w *FileW) Level() int {
-	return w.level
-}
+	if rotate == false {
+		return nil
+	}
 
-func (w *FileW) Init(c *ConfigWriter) error {
-	w.level = convLevel(c.Level)
-	w.rotate = c.Rotate
-	w.dir = path.Dir(c.LogPath)
-	w.fileName = path.Base(c.LogPath)
+	if w.fileBufWriter != nil {
+		if err := w.fileBufWriter.Flush(); err != nil {
+			return err
+		}
+	}
 
-	if err := os.MkdirAll(w.dir, 0755); err != nil {
+	if w.file != nil {
+		if err := w.file.Close(); err != nil {
+			return err
+		}
+	}
+
+	filePath := fmt.Sprintf(w.pathFmt, w.variables...)
+
+	if err := os.MkdirAll(path.Dir(filePath), 0755); err != nil {
 		if !os.IsExist(err) {
 			return err
 		}
 	}
 
-	fileName := w.dir + "/" + w.fileName
-	if file, err := os.OpenFile(fileName, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644); err != nil {
+	if file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644); err != nil {
 		return err
 	} else {
 		w.file = file
 	}
 
-	w.fileBufWriter = bufio.NewWriterSize(w.file, 8192)
-	if w.fileBufWriter == nil {
+	if w.fileBufWriter = bufio.NewWriterSize(w.file, 8192); w.fileBufWriter == nil {
 		return errors.New("new fileBufWriter failed.")
 	}
 
 	return nil
 }
 
-func (w *FileW) Rotate(suffix string) {
-	if w.lastSuffix == suffix {
-		return
-	}
-
-	if err := w.file.Close(); err != nil {
-		log.Println(err)
-	}
-	w.file = nil
-	w.fileBufWriter = nil
-
-	fileName := w.dir + "/" + w.fileName
-	newName := w.dir + "/" + w.fileName + "." + suffix
-	if err := os.Rename(fileName, newName); err != nil {
-		log.Println(err)
-	}
-
-	w.lastSuffix = suffix
-
-	if file, err := os.OpenFile(fileName, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644); err != nil {
-		log.Println(err)
-		return
-	} else {
-		w.file = file
-	}
-
-	w.fileBufWriter = bufio.NewWriterSize(w.file, 8192)
-	if w.fileBufWriter == nil {
-		log.Println("new fileBufWriter failed.")
-	}
-}
-
-func (w *FileW) Flush() error {
+func (w *FileWriter) Flush() error {
 	if w.fileBufWriter != nil {
 		return w.fileBufWriter.Flush()
 	}
 	return nil
 }
 
+func getYear(now *time.Time) int {
+	return now.Year()
+}
+
+func getMonth(now *time.Time) int {
+	return int(now.Month())
+}
+
+func getDay(now *time.Time) int {
+	return now.Day()
+}
+
+func getHour(now *time.Time) int {
+	return now.Hour()
+}
+
+func getMin(now *time.Time) int {
+	return now.Minute()
+}
+
+func convertPatternToFmt(pattern []byte) string {
+	pattern = bytes.Replace(pattern, []byte("%Y"), []byte("%d"), -1)
+	pattern = bytes.Replace(pattern, []byte("%M"), []byte("%02d"), -1)
+	pattern = bytes.Replace(pattern, []byte("%D"), []byte("%02d"), -1)
+	pattern = bytes.Replace(pattern, []byte("%H"), []byte("%02d"), -1)
+	pattern = bytes.Replace(pattern, []byte("%m"), []byte("%02d"), -1)
+	return string(pattern)
+}
+
 func init() {
-	addWriter(&FileW{name: "file"})
+	pathVariableTable = make(map[byte]func(*time.Time) int, 5)
+	pathVariableTable['Y'] = getYear
+	pathVariableTable['M'] = getMonth
+	pathVariableTable['D'] = getDay
+	pathVariableTable['H'] = getHour
+	pathVariableTable['m'] = getMin
 }
