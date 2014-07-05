@@ -7,6 +7,15 @@ import (
 
 func SetLog() {
 	w := log.NewFileWriter()
+    /*
+        %Y  year    (eg: 2014)
+        %M  month   (eg: 07)
+        %D  day     (eg: 05)
+        %H  hour    (eg: 18)
+        %m  minute  (eg: 29)
+
+        notice: No second's variable
+    */
 	w.SetPathPattern("/tmp/logs/error%Y%M%D%H%m.log")
 
 	log.Register(w)
