@@ -170,6 +170,9 @@ func boostrapLogWriter(logger *Logger) {
 		}
 	}
 
+	flushTimer := time.NewTimer(time.Millisecond * 500)
+	rotateTimer := time.NewTimer(time.Second * 10)
+
 	for {
 		select {
 		case r := <-logger.tunnel:
@@ -179,7 +182,7 @@ func boostrapLogWriter(logger *Logger) {
 				}
 			}
 
-		case <-time.After(time.Millisecond * 500):
+		case <-flushTimer.C:
 			for _, w := range logger.writers {
 				if f, ok := w.(Flusher); ok {
 					if err := f.Flush(); err != nil {
@@ -187,8 +190,9 @@ func boostrapLogWriter(logger *Logger) {
 					}
 				}
 			}
+			flushTimer.Reset(time.Millisecond * 500)
 
-		case <-time.After(time.Second * 10):
+		case <-rotateTimer.C:
 			for _, w := range logger.writers {
 				if r, ok := w.(Rotater); ok {
 					if err := r.Rotate(); err != nil {
@@ -196,6 +200,7 @@ func boostrapLogWriter(logger *Logger) {
 					}
 				}
 			}
+			rotateTimer.Reset(time.Second * 10)
 		}
 	}
 }
