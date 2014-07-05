@@ -1,17 +1,17 @@
 log4go
 ======
 
-simple log library for Go language
+Simple log library for Go language.
 
 ####Install
 
     go get github.com/skoo87/log4go
 
 ####Usages
-参考 examples
+Refer to examples
 
 ####TODO
 1. syslog
 2. udp/tcp writer
-3. 更多的 file rotate 规则
+3. more of rules of log rotattion
 
