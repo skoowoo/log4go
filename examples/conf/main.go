@@ -5,9 +5,9 @@ import (
 )
 
 func main() {
-    if err := log.SetupLogWithConf("log.json"); err != nil {
-        panic(err)
-    }
+	if err := log.SetupLogWithConf("log.json"); err != nil {
+		panic(err)
+	}
 	defer log.Close()
 
 	var name = "skoo"

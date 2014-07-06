@@ -5,11 +5,13 @@ import (
 	"log"
 	"runtime"
 	"strconv"
+	"sync"
 	"time"
 )
 
 var (
 	LEVEL_FLAGS = [...]string{"[DEBUG]", "[ INFO]", "[ WARN]", "[ERROR]", "[FATAL]"}
+	recordPool  *sync.Pool
 )
 
 const (
@@ -148,12 +150,11 @@ func (l *Logger) deliverRecordToWriter(level int, format string, args ...interfa
 		l.lastTimeStr = now.Format("2006/01/02 15:04:05")
 	}
 
-	r := &Record{
-		info:  inf,
-		code:  code,
-		time:  l.lastTimeStr,
-		level: level,
-	}
+	r := recordPool.Get().(*Record)
+	r.info = inf
+	r.code = code
+	r.time = l.lastTimeStr
+	r.level = level
 
 	l.tunnel <- r
 }
@@ -181,6 +182,8 @@ func boostrapLogWriter(logger *Logger) {
 					log.Println(err)
 				}
 			}
+
+			recordPool.Put(r)
 
 		case <-flushTimer.C:
 			for _, w := range logger.writers {
@@ -245,4 +248,7 @@ func Close() {
 
 func init() {
 	logger_default = NewLogger()
+	recordPool = &sync.Pool{New: func() interface{} {
+		return &Record{}
+	}}
 }
