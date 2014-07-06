@@ -55,6 +55,7 @@ type Logger struct {
 	level       int
 	lastTime    int64
 	lastTimeStr string
+	c           chan bool
 }
 
 func NewLogger() *Logger {
@@ -66,6 +67,7 @@ func NewLogger() *Logger {
 	l := new(Logger)
 	l.writers = make([]Writer, 0, 2)
 	l.tunnel = make(chan *Record, tunnel_size_default)
+	l.c = make(chan bool, 1)
 	l.level = DEBUG
 
 	go boostrapLogWriter(l)
@@ -105,21 +107,14 @@ func (l *Logger) Fatal(fmt string, args ...interface{}) {
 }
 
 func (l *Logger) Close() {
-	for {
-		select {
-		case r := <-l.tunnel:
-			for _, w := range l.writers {
-				if err := w.Write(r); err != nil {
-					log.Println(err)
-				}
-				if f, ok := w.(Flusher); ok {
-					if err := f.Flush(); err != nil {
-						log.Println(err)
-					}
-				}
+	close(l.tunnel)
+	<-l.c
+
+	for _, w := range l.writers {
+		if f, ok := w.(Flusher); ok {
+			if err := f.Flush(); err != nil {
+				log.Println(err)
 			}
-		default:
-			return
 		}
 	}
 }
@@ -164,7 +159,16 @@ func boostrapLogWriter(logger *Logger) {
 		panic("logger is nil")
 	}
 
-	r := <-logger.tunnel
+	var (
+		r  *Record
+		ok bool
+	)
+
+	if r, ok = <-logger.tunnel; !ok {
+		logger.c <- true
+		return
+	}
+
 	for _, w := range logger.writers {
 		if err := w.Write(r); err != nil {
 			log.Println(err)
@@ -176,7 +180,12 @@ func boostrapLogWriter(logger *Logger) {
 
 	for {
 		select {
-		case r := <-logger.tunnel:
+		case r, ok = <-logger.tunnel:
+			if !ok {
+				logger.c <- true
+				return
+			}
+
 			for _, w := range logger.writers {
 				if err := w.Write(r); err != nil {
 					log.Println(err)
@@ -193,7 +202,7 @@ func boostrapLogWriter(logger *Logger) {
 					}
 				}
 			}
-			flushTimer.Reset(time.Millisecond * 500)
+			flushTimer.Reset(time.Millisecond * 1000)
 
 		case <-rotateTimer.C:
 			for _, w := range logger.writers {
