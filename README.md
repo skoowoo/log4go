@@ -13,6 +13,6 @@ Refer to examples
 ####TODO
 1. syslog
 2. udp/tcp writer
-3. more of rules of log rotattion
+3. more of rules of log rotation
 4. custom the format of log
 
