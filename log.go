@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	LEVEL_FLAGS = [...]string{"[DEBUG]", "[ INFO]", "[ WARN]", "[ERROR]", "[FATAL]"}
+	LEVEL_FLAGS = [...]string{"DEBUG", " INFO", " WARN", "ERROR", "FATAL"}
 	recordPool  *sync.Pool
 )
 
@@ -32,7 +32,7 @@ type Record struct {
 }
 
 func (r *Record) String() string {
-	return fmt.Sprintf("%s %s <%s> %s\n", r.time, LEVEL_FLAGS[r.level], r.code, r.info)
+	return fmt.Sprintf("%s [%s] <%s> %s\n", r.time, LEVEL_FLAGS[r.level], r.code, r.info)
 }
 
 type Writer interface {

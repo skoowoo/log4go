@@ -6,9 +6,10 @@ import (
 
 func SetLog() {
 	w := log.NewConsoleWriter()
+	w.SetColor(true)
 
 	log.Register(w)
-	log.SetLevel(log.ERROR)
+	log.SetLevel(log.DEBUG)
 }
 
 func main() {

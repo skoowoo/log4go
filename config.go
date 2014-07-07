@@ -12,7 +12,8 @@ type ConfFileWriter struct {
 }
 
 type ConfConsoleWriter struct {
-	On bool `json:"On"`
+	On    bool `json:"On"`
+	Color bool `json:"Color"`
 }
 
 type LogConfig struct {
@@ -38,6 +39,7 @@ func SetupLogWithConf(file string) (err error) {
 
 	if lc.CW.On {
 		w := NewConsoleWriter()
+		w.SetColor(lc.CW.Color)
 		Register(w)
 	}
 
