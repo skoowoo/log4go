@@ -6,9 +6,9 @@ import (
 
 func SetLog() {
 	w := log.NewSyslogWriter()
-    w.SetNetwork("udp")
-    w.SetAddr("127.0.0.1:514")
-    w.SetTag("log4go")
+	w.SetNetwork("udp")
+	w.SetAddr("127.0.0.1:514")
+	w.SetTag("log4go")
 
 	log.Register(w)
 	log.SetLevel(log.DEBUG)
