@@ -35,7 +35,7 @@ func (w *SyslogWriter) SetTag(tag string) {
 }
 
 func (w *SyslogWriter) Init() (err error) {
-	w.writer, err = syslog.Dial(w.network, w.addr, syslog.LOG_DEBUG, w.tag)
+	w.writer, err = syslog.Dial(w.network, w.addr, syslog.LOG_SYSLOG, w.tag)
 	return
 }
 
