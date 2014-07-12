@@ -10,6 +10,7 @@ func SetLog() {
 
 	log.Register(w)
 	log.SetLevel(log.DEBUG)
+	log.SetLayout("2006-01-02 15:04:05")
 }
 
 func main() {

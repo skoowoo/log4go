@@ -57,6 +57,7 @@ type Logger struct {
 	lastTime    int64
 	lastTimeStr string
 	c           chan bool
+	layout      string
 }
 
 func NewLogger() *Logger {
@@ -70,6 +71,7 @@ func NewLogger() *Logger {
 	l.tunnel = make(chan *Record, tunnel_size_default)
 	l.c = make(chan bool, 1)
 	l.level = DEBUG
+	l.layout = "2006/01/02 15:04:05"
 
 	go boostrapLogWriter(l)
 
@@ -85,6 +87,10 @@ func (l *Logger) Register(w Writer) {
 
 func (l *Logger) SetLevel(lvl int) {
 	l.level = lvl
+}
+
+func (l *Logger) SetLayout(layout string) {
+	l.layout = layout
 }
 
 func (l *Logger) Debug(fmt string, args ...interface{}) {
@@ -133,7 +139,7 @@ func (l *Logger) deliverRecordToWriter(level int, format string, args ...interfa
 		inf = fmt.Sprint(args...)
 	}
 
-	// source code, function and line num
+	// source code, file and line num
 	_, file, line, ok := runtime.Caller(2)
 	if ok {
 		code = path.Base(file) + ":" + strconv.Itoa(line)
@@ -143,7 +149,7 @@ func (l *Logger) deliverRecordToWriter(level int, format string, args ...interfa
 	now := time.Now()
 	if now.Unix() != l.lastTime {
 		l.lastTime = now.Unix()
-		l.lastTimeStr = now.Format("2006/01/02 15:04:05")
+		l.lastTimeStr = now.Format(l.layout)
 	}
 
 	r := recordPool.Get().(*Record)
@@ -226,6 +232,10 @@ var (
 
 func SetLevel(lvl int) {
 	logger_default.level = lvl
+}
+
+func SetLayout(layout string) {
+	logger_default.layout = layout
 }
 
 func Debug(fmt string, args ...interface{}) {
