@@ -10,6 +10,12 @@ Simple log library for Go language.
 ####Usages
 Refer to examples
 
+####Features
+* Output log to file, the file can be rotated by itself.
+* Output log to console.
+* Output log to remote server with syslog protocol.
+
+
 ####TODO
 1. syslog
 2. udp/tcp writer
