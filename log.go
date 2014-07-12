@@ -3,6 +3,7 @@ package log4go
 import (
 	"fmt"
 	"log"
+	"path"
 	"runtime"
 	"strconv"
 	"sync"
@@ -133,9 +134,9 @@ func (l *Logger) deliverRecordToWriter(level int, format string, args ...interfa
 	}
 
 	// source code, function and line num
-	pc, _, line, ok := runtime.Caller(2)
+	_, file, line, ok := runtime.Caller(2)
 	if ok {
-		code = runtime.FuncForPC(pc).Name() + ":" + strconv.Itoa(line)
+		code = path.Base(file) + ":" + strconv.Itoa(line)
 	}
 
 	// format time
