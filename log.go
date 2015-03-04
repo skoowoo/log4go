@@ -1,4 +1,4 @@
-package log4go
+package log4go  // import skoo.me/log4go
 
 import (
 	"fmt"
