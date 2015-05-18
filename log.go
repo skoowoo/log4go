@@ -1,4 +1,4 @@
-package log4go  // import skoo.me/skoo87/log4go
+package log4go
 
 import (
 	"fmt"
@@ -11,12 +11,13 @@ import (
 )
 
 var (
-	LEVEL_FLAGS = [...]string{"DEBUG", " INFO", " WARN", "ERROR", "FATAL"}
+	LEVEL_FLAGS = [...]string{"TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"}
 	recordPool  *sync.Pool
 )
 
 const (
-	DEBUG = iota
+	TRACE = iota
+	DEBUG
 	INFO
 	WARNING
 	ERROR
@@ -33,7 +34,7 @@ type Record struct {
 }
 
 func (r *Record) String() string {
-	return fmt.Sprintf("%s [%s] <%s> %s\n", r.time, LEVEL_FLAGS[r.level], r.code, r.info)
+	return fmt.Sprintf("%s||%s||%s||%s\n", LEVEL_FLAGS[r.level], r.time, r.code, r.info)
 }
 
 type Writer interface {
@@ -91,6 +92,10 @@ func (l *Logger) SetLevel(lvl int) {
 
 func (l *Logger) SetLayout(layout string) {
 	l.layout = layout
+}
+
+func (l *Logger) Trace(fmt string, args ...interface{}) {
+	l.deliverRecordToWriter(TRACE, fmt, args...)
 }
 
 func (l *Logger) Debug(fmt string, args ...interface{}) {
@@ -236,6 +241,10 @@ func SetLevel(lvl int) {
 
 func SetLayout(layout string) {
 	logger_default.layout = layout
+}
+
+func Trace(fmt string, args ...interface{}) {
+	logger_default.deliverRecordToWriter(TRACE, fmt, args...)
 }
 
 func Debug(fmt string, args ...interface{}) {

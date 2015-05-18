@@ -9,6 +9,9 @@ type colorRecord Record
 
 func (r *colorRecord) String() string {
 	switch r.level {
+	case TRACE:
+		return fmt.Sprintf("\033[36m%s\033[0m [\033[34m%s\033[0m] \033[47;30m%s\033[0m %s\n",
+			r.time, LEVEL_FLAGS[r.level], r.code, r.info)
 	case DEBUG:
 		return fmt.Sprintf("\033[36m%s\033[0m [\033[34m%s\033[0m] \033[47;30m%s\033[0m %s\n",
 			r.time, LEVEL_FLAGS[r.level], r.code, r.info)
