@@ -13,6 +13,7 @@ import (
 var pathVariableTable map[byte]func(*time.Time) int
 
 type FileWriter struct {
+	filename      string
 	pathFmt       string
 	file          *os.File
 	fileBufWriter *bufio.Writer
@@ -26,6 +27,10 @@ func NewFileWriter() *FileWriter {
 
 func (w *FileWriter) Init() error {
 	return w.Rotate()
+}
+
+func (w *FileWriter) SetFileName(filename string) {
+	w.filename = filename
 }
 
 func (w *FileWriter) SetPathPattern(pattern string) error {
@@ -77,6 +82,7 @@ func (w *FileWriter) Write(r *Record) error {
 }
 
 func (w *FileWriter) Rotate() error {
+
 	now := time.Now()
 	v := 0
 	rotate := false
@@ -84,7 +90,8 @@ func (w *FileWriter) Rotate() error {
 	for i, act := range w.actions {
 		v = act(&now)
 		if v != w.variables[i] {
-			w.variables[i] = v
+			// 此处不更新时间
+			// w.variables[i] = v
 			rotate = true
 		}
 	}
@@ -100,18 +107,38 @@ func (w *FileWriter) Rotate() error {
 	}
 
 	if w.file != nil {
+
+		// 将文件以pattern形式改名关关闭
+		filePath := fmt.Sprintf(w.pathFmt, w.variables...)
+		filePath = w.filename + filePath
+
+		if err := os.Rename(w.filename, filePath); err != nil {
+			return err
+		}
+
 		if err := w.file.Close(); err != nil {
 			return err
 		}
 	}
 
-	filePath := fmt.Sprintf(w.pathFmt, w.variables...)
+	// 更新时间
+	for i, act := range w.actions {
+		v = act(&now)
+		if v != w.variables[i] {
+			w.variables[i] = v
+		}
+	}
+
+	//filePath := fmt.Sprintf(w.pathFmt, w.variables...)
+	filePath := w.filename
 
 	if err := os.MkdirAll(path.Dir(filePath), 0755); err != nil {
 		if !os.IsExist(err) {
 			return err
 		}
 	}
+
+	// 开启新的文件开始写
 
 	if file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644); err != nil {
 		return err

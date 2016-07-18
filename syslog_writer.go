@@ -43,6 +43,8 @@ func (w *SyslogWriter) Write(r *Record) (err error) {
 	s := ((*ShortRecord)(r)).String()
 
 	switch r.level {
+	case TRACE:
+		err = w.writer.Debug(s)
 	case DEBUG:
 		err = w.writer.Debug(s)
 

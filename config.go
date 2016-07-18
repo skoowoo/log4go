@@ -44,6 +44,8 @@ func SetupLogWithConf(file string) (err error) {
 	}
 
 	switch lc.Level {
+	case "trace":
+		SetLevel(TRACE)
 	case "debug":
 		SetLevel(DEBUG)
 
