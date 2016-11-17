@@ -43,16 +43,17 @@ type Record struct {
 }
 
 func (r *Record) String() string {
+	fmt.Printf("r.prfix=%v\n ", r.prefix)
 	var verbose string = r.info + "\n"
-	if (r.prefix & 1) == 1 {
+	if (r.prefix & 0x1) == 0x1 {
 		verbose = r.code + " " + verbose
 	}
 
-	if (r.prefix & 1 << 0x1) == 1<<1 {
+	if (r.prefix & (1 << 0x1)) == (1 << 0x1) {
 		verbose = LEVEL_FLAGS[r.level] + " " + verbose
 	}
 
-	if (r.prefix & 2 << 0x1) == 2<<1 {
+	if (r.prefix & (2 << 0x1)) == (2 << 0x1) {
 		verbose = r.time + " " + verbose
 	}
 	return verbose
@@ -186,6 +187,7 @@ func (l *Logger) deliverRecordToWriter(level int, format string, args ...interfa
 	r.code = code
 	r.time = l.lastTimeStr
 	r.level = level
+	r.prefix = l.prefix
 
 	l.tunnel <- r
 }
@@ -265,6 +267,10 @@ func SetLevel(lvl int) {
 
 func SetLayout(layout string) {
 	logger_default.layout = layout
+}
+
+func SetPrefix(prefix int) {
+	logger_default.prefix = prefix
 }
 
 func Debug(fmt string, args ...interface{}) {
