@@ -119,8 +119,8 @@ func (l *Logger) SetLayout(layout string) {
 	l.layout = layout
 }
 
-func (l *Logger) SetSuffix(suffix int) {
-	l.prefix = suffix
+func (l *Logger) SetPrefix(prefix int) {
+	l.prefix = prefix
 }
 
 func (l *Logger) Debug(fmt string, args ...interface{}) {
