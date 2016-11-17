@@ -23,41 +23,17 @@ const (
 	FATAL
 )
 
-const (
-	//   1    1     1
-	// TIME LEVEL CODE INFO
-	SUFFIX_NONE  = iota
-	SUFFIX_CODE  = 0x1
-	SUFFIX_LEVEL = 1 << 0x1
-	SUFFIX_TIME  = 2 << 0x1
-)
-
 const tunnel_size_default = 1024
 
 type Record struct {
-	time   string
-	code   string
-	info   string
-	level  int
-	suffix int
+	time  string
+	code  string
+	info  string
+	level int
 }
 
 func (r *Record) String() string {
-	var verbose string = r.info + "\n"
-	if (r.suffix & 1) == 1 {
-		verbose = r.code + " " + verbose
-	}
-
-	if (r.suffix & 1 << 0x1) == 1<<1 {
-		verbose = LEVEL_FLAGS[r.level] + " " + verbose
-	}
-
-	if (r.suffix & 2 << 0x1) == 2<<1 {
-		verbose = r.time + " " + verbose
-	}
-
-	return verbose
-	//return fmt.Sprintf("%s [%s] <%s> %s\n", r.time, LEVEL_FLAGS[r.level], r.code, r.info)
+	return fmt.Sprintf("%s [%s] <%s> %s\n", r.time, LEVEL_FLAGS[r.level], r.code, r.info)
 }
 
 type Writer interface {
@@ -78,7 +54,6 @@ type Logger struct {
 	writers     []Writer
 	tunnel      chan *Record
 	level       int
-	suffix      int
 	lastTime    int64
 	lastTimeStr string
 	c           chan bool
@@ -97,7 +72,6 @@ func NewLogger() *Logger {
 	l.c = make(chan bool, 1)
 	l.level = DEBUG
 	l.layout = "2006/01/02 15:04:05"
-	l.suffix = SUFFIX_TIME | SUFFIX_LEVEL | SUFFIX_CODE
 
 	go boostrapLogWriter(l)
 
@@ -117,10 +91,6 @@ func (l *Logger) SetLevel(lvl int) {
 
 func (l *Logger) SetLayout(layout string) {
 	l.layout = layout
-}
-
-func (l *Logger) SetSuffix(suffix int) {
-	l.suffix = suffix
 }
 
 func (l *Logger) Debug(fmt string, args ...interface{}) {
