@@ -55,7 +55,6 @@ func (r *Record) String() string {
 	if (r.prefix & 2 << 0x1) == 2<<1 {
 		verbose = r.time + " " + verbose
 	}
-
 	return verbose
 	//return fmt.Sprintf("%s [%s] <%s> %s\n", r.time, LEVEL_FLAGS[r.level], r.code, r.info)
 }
