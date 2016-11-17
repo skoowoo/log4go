@@ -57,6 +57,7 @@ func (r *Record) String() string {
 		verbose = r.time + " " + verbose
 	}
 	return verbose
+
 	//return fmt.Sprintf("%s [%s] <%s> %s\n", r.time, LEVEL_FLAGS[r.level], r.code, r.info)
 }
 

@@ -16,8 +16,8 @@ func TestPrefix(t *testing.T) {
 
 	fmt.Printf("%v,%v,%v \n", (pre&1) == 1, (pre&1<<0x1) == 1<<1, (pre&2<<0x1) == 2<<1)
 
-	Logcode.Info("this ia access log")
-	Logtime.Info("this ia create log")
+	Logcode.Info("this is a only code prefix log")
+	Logtime.Info("this is a only time prefix log")
 	LogDebug.Info("this is debug log")
 }
 
