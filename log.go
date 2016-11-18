@@ -43,7 +43,7 @@ type Record struct {
 }
 
 func (r *Record) String() string {
-	fmt.Printf("r.prfix=%v\n ", r.prefix)
+	//fmt.Printf("r.prfix=%v\n ", r.prefix)
 	var verbose string = r.info + "\n"
 	if (r.prefix & 0x1) == 0x1 {
 		verbose = r.code + " " + verbose
