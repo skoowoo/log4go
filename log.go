@@ -23,17 +23,42 @@ const (
 	FATAL
 )
 
+const (
+	//   1    1     1
+	// TIME LEVEL CODE INFO
+	PREFIX_NONE  = iota
+	PREFIX_CODE  = 0x1
+	PREFIX_LEVEL = 1 << 0x1
+	PREFIX_TIME  = 2 << 0x1
+)
+
 const tunnel_size_default = 1024
 
 type Record struct {
-	time  string
-	code  string
-	info  string
-	level int
+	time   string
+	code   string
+	info   string
+	level  int
+	prefix int
 }
 
 func (r *Record) String() string {
-	return fmt.Sprintf("%s [%s] <%s> %s\n", r.time, LEVEL_FLAGS[r.level], r.code, r.info)
+	//fmt.Printf("r.prfix=%v\n ", r.prefix)
+	var verbose string = r.info + "\n"
+	if (r.prefix & 0x1) == 0x1 {
+		verbose = r.code + " " + verbose
+	}
+
+	if (r.prefix & (1 << 0x1)) == (1 << 0x1) {
+		verbose = "[" + LEVEL_FLAGS[r.level] + "] " + verbose
+	}
+
+	if (r.prefix & (2 << 0x1)) == (2 << 0x1) {
+		verbose = "[" + r.time + "] " + verbose
+	}
+	return verbose
+
+	//return fmt.Sprintf("%s [%s] <%s> %s\n", r.time, LEVEL_FLAGS[r.level], r.code, r.info)
 }
 
 type Writer interface {
@@ -54,6 +79,7 @@ type Logger struct {
 	writers     []Writer
 	tunnel      chan *Record
 	level       int
+	prefix      int
 	lastTime    int64
 	lastTimeStr string
 	c           chan bool
@@ -72,6 +98,7 @@ func NewLogger() *Logger {
 	l.c = make(chan bool, 1)
 	l.level = DEBUG
 	l.layout = "2006/01/02 15:04:05"
+	l.prefix = PREFIX_TIME | PREFIX_LEVEL | PREFIX_CODE
 
 	go boostrapLogWriter(l)
 
@@ -91,6 +118,10 @@ func (l *Logger) SetLevel(lvl int) {
 
 func (l *Logger) SetLayout(layout string) {
 	l.layout = layout
+}
+
+func (l *Logger) SetPrefix(prefix int) {
+	l.prefix = prefix
 }
 
 func (l *Logger) Debug(fmt string, args ...interface{}) {
@@ -157,6 +188,7 @@ func (l *Logger) deliverRecordToWriter(level int, format string, args ...interfa
 	r.code = code
 	r.time = l.lastTimeStr
 	r.level = level
+	r.prefix = l.prefix
 
 	l.tunnel <- r
 }
@@ -236,6 +268,10 @@ func SetLevel(lvl int) {
 
 func SetLayout(layout string) {
 	logger_default.layout = layout
+}
+
+func SetPrefix(prefix int) {
+	logger_default.prefix = prefix
 }
 
 func Debug(fmt string, args ...interface{}) {
