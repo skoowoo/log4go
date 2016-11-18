@@ -50,7 +50,7 @@ func (r *Record) String() string {
 	}
 
 	if (r.prefix & (1 << 0x1)) == (1 << 0x1) {
-		verbose = LEVEL_FLAGS[r.level] + " " + verbose
+		verbose = "[" + LEVEL_FLAGS[r.level] + "] " + verbose
 	}
 
 	if (r.prefix & (2 << 0x1)) == (2 << 0x1) {
