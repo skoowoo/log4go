@@ -54,7 +54,7 @@ func (r *Record) String() string {
 	}
 
 	if (r.prefix & (2 << 0x1)) == (2 << 0x1) {
-		verbose = r.time + " " + verbose
+		verbose = "["r.time + "] " + verbose
 	}
 	return verbose
 
